@@ -56,7 +56,7 @@
 
   ZMQDealer
   (send-message! [this message-map]
-    (send-dealer-message! (:dealer this) message-map)))
+    (async/go (async/>! (:channel this) message-map))))
 
 (defn new-hive-client! [endpoint ident]
   (component/start (->HiveClient endpoint ident)))
