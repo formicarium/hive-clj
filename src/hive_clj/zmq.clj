@@ -25,8 +25,14 @@
             (recur xs))
         (zmq/send socket (str->bytes x))))))
 
+(defn await-ack [dealer]
+  (if-let [ack (zmq/receive-str dealer)]
+    (prn "ACK RECEIVED" ack)
+    (prn "ERROR")))
+
 (defn send-dealer-message! [dealer message-map]
-  (send! dealer (cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map))))
+  (send! dealer (cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map)))
+  (await-ack dealer))
 
 (defn send-channel [dealer]
   (let [ch (async/chan 1000)]
