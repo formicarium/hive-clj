@@ -2,7 +2,8 @@
   (:require [zeromq.zmq :as zmq]
             [cheshire.core :as cheshire]
             [com.stuartsierra.component :as component]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async])
+  (:import java.time.LocalDateTime))
 
 (def context (zmq/context 1))
 
@@ -25,16 +26,28 @@
             (recur xs))
         (zmq/send socket (str->bytes x))))))
 
+(defonce last-ack (atom (LocalDateTime/now)))
+
+(defn handle-ack-received []
+  (swap! last-ack (constantly (LocalDateTime/now))))
+
+(defn handle-ack-not-received []
+  (when (.isBefore @last-ack (.minusSeconds (LocalDateTime/now) 10)))
+  (prn "hive died"))
+
 (defn await-ack [dealer]
   (if-let [ack (zmq/receive-str dealer)];;TODO- kill this thread immediatly if the terminate-hive-client! is triggered and this is running
-    (prn "ACK RECEIVED" ack)
-    (prn "ERROR")))
+    (handle-ack-received)
+    (handle-ack-not-received)))
 
 (defn send-dealer-message! [dealer message-map]
   (send! dealer (cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map)))
   (await-ack dealer))
 
-(defn send-channel [dealer]
+(defn heartbeat-msg [payload]
+  {:payload payload :meta {:type :heartbeat}})
+
+(defn send-channel [dealer heartbeat-timing-ms]
   (let [ch (async/chan 1000)
         stop-ch (async/chan)]
     (async/go-loop []
@@ -42,9 +55,8 @@
         (some->> value (send-dealer-message! dealer))
         (recur)))
     (async/go-loop []
-      (when (async/alt! stop-ch false (async/timeout 2000) :keep-going)
-        (prn "sending heartbeat now.")
-        (async/>! ch {:payload "ola" :meta {:type :heartbeat}})
+      (when (async/alt! stop-ch false (async/timeout heartbeat-timing-ms) :keep-going)
+        (async/>! ch (heartbeat-msg ""))
         (recur)))
     {:main ch
      :heartbeat stop-ch}))
@@ -64,7 +76,7 @@
   (start [this]
     (let [dealer (new-dealer-socket! endpoint ident)]
       (assoc this :dealer dealer
-                  :channel (send-channel dealer))))
+                  :channel (send-channel dealer 2000))))
 
   (stop [this]
     (terminate-sender-channel! (:channel this))
