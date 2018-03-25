@@ -1,5 +1,6 @@
 (ns hive-clj.zmq
   (:require [zeromq.zmq :as zmq]
+            [hive-clj.config :as config]
             [hive-clj.adapters :as adapters]
             [com.stuartsierra.component :as component]
             [clojure.core.async :as async])
@@ -10,8 +11,8 @@
 (defn new-dealer-socket! [endpoint ident]
   (let [dealer (zmq/socket context :dealer)]
     (zmq/set-identity dealer (adapters/str->bytes ident))
-    (zmq/set-receive-timeout dealer 10000)
-    (zmq/set-send-timeout dealer 1000)
+    (zmq/set-receive-timeout dealer config/zmq-receive-timeout-ms)
+    (zmq/set-send-timeout dealer config/zmq-send-timeout)
     (zmq/connect dealer endpoint)))
 
 (defn send! [socket & parts]
@@ -44,7 +45,7 @@
   {:payload payload :meta {:type :heartbeat}})
 
 (defn send-channel [dealer heartbeat-timing-ms]
-  (let [ch (async/chan 1000)
+  (let [ch (async/chan config/main-channel-buffer-size)
         stop-ch (async/chan)]
     (async/go-loop []
       (when-let [value (async/<! ch)]
@@ -72,7 +73,7 @@
   (start [this]
     (let [dealer (new-dealer-socket! endpoint ident)]
       (assoc this :dealer dealer
-                  :channel (send-channel dealer 2000))))
+             :channel (send-channel dealer config/heartbeat-timing-ms))))
 
   (stop [this]
     (terminate-sender-channel! (:channel this))
