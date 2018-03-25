@@ -26,7 +26,7 @@
         (zmq/send socket (str->bytes x))))))
 
 (defn await-ack [dealer]
-  (if-let [ack (zmq/receive-str dealer)]
+  (if-let [ack (zmq/receive-str dealer)];;TODO- kill this thread immediatly if the terminate-hive-client! is triggered and this is running
     (prn "ACK RECEIVED" ack)
     (prn "ERROR")))
 
@@ -35,14 +35,25 @@
   (await-ack dealer))
 
 (defn send-channel [dealer]
-  (let [ch (async/chan 1000)]
+  (let [ch (async/chan 1000)
+        stop-ch (async/chan)]
     (async/go-loop []
       (when-let [value (async/<! ch)]
         (some->> value (send-dealer-message! dealer))
         (recur)))
-    ch))
+    (async/go-loop []
+      (when (async/alt! stop-ch false (async/timeout 2000) :keep-going)
+        (prn "sending heartbeat now.")
+        (async/>! ch {:payload "ola" :meta {:type :heartbeat}})
+        (recur)))
+    {:main ch
+     :heartbeat stop-ch}))
 
-(defn terminate-sender-channel! [ch] (async/close! ch))
+(defn terminate-sender-channel! [{:keys [main heartbeat]}]
+  (async/close! main)
+  (async/reduce (constantly nil) [] main)
+  (async/close! heartbeat))
+
 (defn terminate-dealer-socket! [dealer] (zmq/close dealer))
 
 (defprotocol ZMQDealer
