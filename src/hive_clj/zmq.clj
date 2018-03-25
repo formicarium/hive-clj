@@ -1,19 +1,15 @@
 (ns hive-clj.zmq
   (:require [zeromq.zmq :as zmq]
-            [cheshire.core :as cheshire]
+            [hive-clj.adapters :as adapters]
             [com.stuartsierra.component :as component]
             [clojure.core.async :as async])
   (:import java.time.LocalDateTime))
 
 (def context (zmq/context 1))
 
-(defn str->bytes [str]
-  (when str
-    (.getBytes str)))
-
 (defn new-dealer-socket! [endpoint ident]
   (let [dealer (zmq/socket context :dealer)]
-    (zmq/set-identity dealer (str->bytes ident))
+    (zmq/set-identity dealer (adapters/str->bytes ident))
     (zmq/set-receive-timeout dealer 10000)
     (zmq/set-send-timeout dealer 1000)
     (zmq/connect dealer endpoint)))
@@ -22,9 +18,9 @@
   (loop [[x & xs] parts]
     (when x
       (if xs
-        (do (zmq/send socket (str->bytes x) zmq/send-more)
+        (do (zmq/send socket (adapters/str->bytes x) zmq/send-more)
             (recur xs))
-        (zmq/send socket (str->bytes x))))))
+        (zmq/send socket (adapters/str->bytes x))))))
 
 (defonce last-ack (atom (LocalDateTime/now)))
 
@@ -41,7 +37,7 @@
     (handle-ack-not-received)))
 
 (defn send-dealer-message! [dealer message-map]
-  (send! dealer (cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map)))
+  (apply send! dealer (adapters/raw->event message-map))
   (await-ack dealer))
 
 (defn heartbeat-msg [payload]
