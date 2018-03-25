@@ -29,7 +29,7 @@
   (swap! last-ack (constantly (LocalDateTime/now))))
 
 (defn handle-ack-not-received []
-  (when (.isBefore @last-ack (.minusSeconds (LocalDateTime/now) 10)))
+  (when (.isBefore @last-ack (.minusSeconds (LocalDateTime/now) config/hive-unresponsive-threshold-s)))
   (prn "hive died"))
 
 (defn await-ack [dealer]
