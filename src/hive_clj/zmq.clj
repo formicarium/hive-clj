@@ -1,68 +1,115 @@
 (ns hive-clj.zmq
   (:require [zeromq.zmq :as zmq]
-            [cheshire.core :as cheshire]
+            [hive-clj.config :as config]
+            [hive-clj.adapters :as adapters]
             [com.stuartsierra.component :as component]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async])
+  (:import java.time.LocalDateTime))
 
 (def context (zmq/context 1))
 
-(defn str->bytes [str]
-  (when str
-    (.getBytes str)))
-
 (defn new-dealer-socket! [endpoint ident]
   (let [dealer (zmq/socket context :dealer)]
-    (zmq/set-identity dealer (str->bytes ident))
-    (zmq/set-receive-timeout dealer 10000)
-    (zmq/set-send-timeout dealer 1000)
+    (zmq/set-identity dealer (adapters/str->bytes ident))
+    (zmq/set-receive-timeout dealer config/zmq-receive-timeout-ms)
+    (zmq/set-send-timeout dealer config/zmq-send-timeout)
     (zmq/connect dealer endpoint)))
 
 (defn send! [socket & parts]
   (loop [[x & xs] parts]
     (when x
       (if xs
-        (do (zmq/send socket (str->bytes x) zmq/send-more)
+        (do (zmq/send socket (adapters/str->bytes x) zmq/send-more)
             (recur xs))
-        (zmq/send socket (str->bytes x))))))
+        (zmq/send socket (adapters/str->bytes x))))))
+
+(defonce last-ack (atom (LocalDateTime/now)))
+
+(defn handle-ack-received []
+  (swap! last-ack (constantly (LocalDateTime/now))))
+
+(defn handle-ack-not-received []
+  (when (.isBefore @last-ack (.minusSeconds (LocalDateTime/now) config/hive-unresponsive-threshold-s))
+    (prn "hive died")))
 
 (defn await-ack [dealer]
-  (if-let [ack (zmq/receive-str dealer)]
-    (prn "ACK RECEIVED" ack)
-    (prn "ERROR")))
+  (if-let [ack (zmq/receive-str dealer)];;TODO- kill this thread immediatly if the terminate-hive-client! is triggered and this is running
+    (handle-ack-received)
+    (handle-ack-not-received)))
 
 (defn send-dealer-message! [dealer message-map]
-  (send! dealer (cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map)))
+  (apply send! dealer (adapters/raw->event message-map))
   (await-ack dealer))
 
-(defn send-channel [dealer]
-  (let [ch (async/chan 1000)]
-    (async/go-loop []
-      (when-let [value (async/<! ch)]
-        (some->> value (send-dealer-message! dealer))
-        (recur)))
-    ch))
+(defn heartbeat-msg [client]
+  {:payload "PING" 
+   :meta {:type :heartbeat
+          :service (:ident client)}})
 
-(defn terminate-sender-channel! [ch] (async/close! ch))
+(defn handshake-message [client]
+  {:payload "HANDSHAKE"
+   :meta {:type :register
+          :service (:ident client)}})
+
+(defn close-message [client]
+  {:payload "CLOSE"
+   :meta {:type :close
+          :service (:ident client)}})
+
+(defn send-channel [dealer]
+  (let [ch (async/chan config/main-channel-buffer-size)
+        stop-ch (async/chan)]
+    (async/go-loop []
+      (when (async/alt! stop-ch false :default :keep-going)
+        (some->> ch
+                 async/<!
+                 (send-dealer-message! dealer))
+        (recur)))
+    {:stop-ch stop-ch
+     :main-ch ch}))
+
+(defn terminate-sender-channel! [{:keys [main-ch stop-ch]}]
+  (async/close! stop-ch)
+  (async/reduce (constantly nil) [] main-ch)
+  (async/close! main-ch))
+
 (defn terminate-dealer-socket! [dealer] (zmq/close dealer))
 
 (defprotocol ZMQDealer
   (send-message! [this message-map]))
 
+(defn start-heartbeat-loop [{{:keys [main-ch stop-ch]} :channels :as client} heartbeat-timing-ms]
+  (async/go-loop []
+    (when (async/alt! stop-ch false (async/timeout heartbeat-timing-ms) :keep-going)
+      (send-message! client (heartbeat-msg client))
+      (recur))))
+
+(defn start-handshake-request [client]
+  (send-dealer-message! (:dealer client) (handshake-message client)))
+
+(defn send-close-request [client]
+  (send-dealer-message! (:dealer client) (close-message client)))
+
 (defrecord HiveClient [endpoint ident]
   component/Lifecycle
   (start [this]
-    (let [dealer (new-dealer-socket! endpoint ident)]
-      (assoc this :dealer dealer
-                  :channel (send-channel dealer))))
+    (let [dealer (new-dealer-socket! endpoint ident)
+          stop-ch (async/chan)
+          started-this (assoc this :dealer dealer :channels (send-channel dealer) :ident ident)]
+      (start-handshake-request started-this)
+      (start-heartbeat-loop started-this config/heartbeat-timing-ms)
+      started-this))
 
   (stop [this]
-    (terminate-sender-channel! (:channel this))
+    (terminate-sender-channel! (:channels this)) ;; Ensures that heartbeat delivery also is ended
+    (send-close-request this)
     (terminate-dealer-socket! (:dealer this))
-    (dissoc this :channel :dealer))
+    (dissoc this :channels :dealer))
 
   ZMQDealer
   (send-message! [this message-map]
-    (async/go (async/>! (:channel this) message-map))))
+    (async/go 
+      (async/>! (-> this :channels :main-ch) message-map))))
 
 (defn new-hive-client! [endpoint ident]
   (component/start (->HiveClient endpoint ident)))
