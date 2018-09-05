@@ -109,7 +109,7 @@
   ZMQDealer
   (send-message! [this message-map]
     (async/go
-      (async/>! (-> this :channels :main-ch) (adapters/trace-payload message-map)))))
+      (async/>! (-> this :channels :main-ch) (adapters/hive-message message-map)))))
 
 (defn new-hive-client! [endpoint ident]
   (component/start (->HiveClient endpoint ident)))

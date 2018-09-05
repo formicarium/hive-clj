@@ -1,9 +1,9 @@
 (ns hive-clj.core-test
-  (:require [midje.sweet :refer :all]
-            [hive-clj.adapters :as adapters]
+  (:require [hive-clj.adapters :as adapters]
             [matcher-combinators.matchers :as m]
             [matcher-combinators.midje :refer [match]]
-            [hive-clj.models :as models])
+            [midje.sweet :refer :all]
+            [schema.core :as s])
   (:import java.time.LocalDateTime))
 
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
@@ -81,3 +81,24 @@
                          :context {:trace-id  "Shuffle_3fa149e"
                                    :parent-id "Shuffle_3fa149e.xlpDU"
                                    :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+
+(s/with-fn-validation
+  (fact "We can build a hive message from message-map for in-request"
+    (let [message-map in-request-sample]
+      (adapters/hive-message message-map)
+      => (match (m/embeds
+                 {:meta {:type :new-event
+                         :service :purgatory}
+                  :identity "purgatory"
+                  :payload {:timestamp #(instance? LocalDateTime %)
+                            :payload   (str (assoc message-map-sample :req-type :in-request))
+                            :tags    {:http  {:method      "get"
+                                              :status_code 200
+                                              :url         uri}
+                                      :peer  {:service "purgatory"
+                                              :port    8080}
+                                      :kind  "server"
+                                      :event "in-request"}
+                            :context {:trace-id  "Shuffle_3fa149e"
+                                      :parent-id "Shuffle_3fa149e.xlpDU"
+                                      :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}})))))

@@ -74,3 +74,10 @@
    :tags (map->span-tags message-map)
    :payload (str message-map)
    :context (map->span-ctx message-map)})
+
+(defn hive-message [message-map]
+  (let [service (extract-service (:request message-map))]
+    {:meta {:type :new-event
+            :service (keyword service)}
+     :identity service
+     :payload (trace-payload message-map)}))

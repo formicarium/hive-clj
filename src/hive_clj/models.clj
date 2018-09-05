@@ -36,3 +36,8 @@
                    :tags SpanTags
                    :payload s/Str
                    :context SpanContext})
+
+(s/defschema HiveMessage {:meta {:type s/Keyword
+                                 :service s/Keyword}
+                          :payload Span
+                          :identity s/Str})
