@@ -10,12 +10,13 @@
   [(cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map))])
 
 (defn map->span-tags [message-map]
-  ;; TODO implementation
-  )
-
-(defn map->span-logs [message-map]
-  ;;TODO implementation
-  )
+  {:http {:method (name (:request-method message-map))
+          :status_code (:status message-map)
+          :url (:uri message-map)}
+   :peer {:service (:service message-map)
+          :port (:server-port message-map)}
+   :kind "server"
+   :event "in-request"})
 
 (defn cid->trace-id [cid]
   (second (re-find #"(^[A-Za-z0-9\-\_]+)\." cid)))
@@ -30,13 +31,17 @@
    :span-id (cid->span-id cid)
    :parent-id (cid->parent-id cid)})
 
-(defn map->span-ctx [message-map]
- (cid->span-ctx (:cid message-map)))
+(defn map->cid [{:keys [headers]}]
+  (get headers "X-Correlation-ID"))
 
-(defn trace-payload [message-map]
-  {:op-name "pimba";this would be cool to be the same keyword used in discovery endpoints
-   :start  (LocalDateTime/now)
-   :finish (LocalDateTime/now);TODO implement finish of span
+(defn map->span-ctx [message-map]
+  (cid->span-ctx (map->cid message-map)))
+
+(defn map->op-name [{:keys [uri]}]
+  uri)
+
+(defn trace-payload [message-map];; supposedly a pedestal request map, at least for now
+  {:timestamp  (LocalDateTime/now)
    :tags (map->span-tags message-map)
-   :logs (map->span-logs message-map)
+   :payload (str message-map)
    :context (map->span-ctx message-map)})
