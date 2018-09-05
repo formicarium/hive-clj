@@ -12,7 +12,7 @@
   (let [dealer (zmq/socket context :dealer)]
     (zmq/set-identity dealer (adapters/str->bytes ident))
     (zmq/set-receive-timeout dealer config/zmq-receive-timeout-ms)
-    (zmq/set-send-timeout dealer config/zmq-send-timeout)
+    ;(zmq/set-send-timeout dealer config/zmq-send-timeout)
     (zmq/connect dealer endpoint)))
 
 (defn send! [socket & parts]
@@ -42,7 +42,7 @@
   (await-ack dealer))
 
 (defn heartbeat-msg [client]
-  {:payload "PING" 
+  {:payload "PING"
    :meta {:type :heartbeat
           :service (:ident client)}})
 
@@ -108,8 +108,8 @@
 
   ZMQDealer
   (send-message! [this message-map]
-    (async/go 
-      (async/>! (-> this :channels :main-ch) message-map))))
+    (async/go
+      (async/>! (-> this :channels :main-ch) (adapters/trace-payload message-map)))))
 
 (defn new-hive-client! [endpoint ident]
   (component/start (->HiveClient endpoint ident)))
