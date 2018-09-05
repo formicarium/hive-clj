@@ -12,7 +12,7 @@
   (let [dealer (zmq/socket context :dealer)]
     (zmq/set-identity dealer (adapters/str->bytes ident))
     (zmq/set-receive-timeout dealer config/zmq-receive-timeout-ms)
-    (zmq/set-send-timeout dealer config/zmq-send-timeout)
+    ;(zmq/set-send-timeout dealer config/zmq-send-timeout)
     (zmq/connect dealer endpoint)))
 
 (defn send! [socket & parts]
@@ -90,6 +90,8 @@
 (defn send-close-request [client]
   (send-dealer-message! (:dealer client) (close-message client)))
 
+
+
 (defrecord HiveClient [endpoint ident]
   component/Lifecycle
   (start [this]
@@ -109,7 +111,7 @@
   ZMQDealer
   (send-message! [this message-map]
     (async/go 
-      (async/>! (-> this :channels :main-ch) message-map))))
+      (async/>! (-> this :channels :main-ch) (adapters/trace-payload message-map)))))
 
 (defn new-hive-client! [endpoint ident]
   (component/start (->HiveClient endpoint ident)))

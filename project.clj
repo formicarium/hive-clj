@@ -15,4 +15,5 @@
   :profiles {:dev     {:aliases      {"run-dev" ["trampoline" "run" "-m" "hive.core/start!"]}
                        :plugins      [[lein-midje "3.2.1"]]
                        :dependencies [[io.pedestal/pedestal.service-tools "0.5.3"]
+                                      [nubank/matcher-combinators "0.2.8"]
                                       [midje "1.9.1"]]}})
