@@ -8,12 +8,20 @@
 
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
 (def uri "some-uri")
-(def message-map-sample {:headers {"X-Correlation-ID" cid}
-                         :uri uri
-                         :status 200
-                         :request-method :get
-                         :service "purgatory"
-                         :server-port 8080})
+(def message-map-sample {:request {:headers       {"X-Correlation-ID" cid
+                                                   "host"             "purgatory"}
+                                   :uri            uri
+                                   :status         200
+                                   :request-method :get
+                                   :service        "purgatory"
+                                   :server-port    8080}})
+
+(defn req-sample [map req-type]
+  (merge map {:req-type req-type}))
+
+(def http-req-sample (partial req-sample message-map-sample))
+(def in-request-sample (http-req-sample :in-request))
+(def out-request-sample (http-req-sample :out-request))
 
 (fact "We can get trace-id from cid"
   (adapters/cid->trace-id cid) => "Shuffle_3fa149e")
@@ -30,11 +38,23 @@
       :parent-id "Shuffle_3fa149e.xlpDU"
       :span-id "Shuffle_3fa149e.xlpDU.ZIKGH"})
 
-(fact "We can build trace-payload from message-map"
-  (let [message-map message-map-sample]
+
+(fact "We can build span tags from message-map (in-request)"
+  (let [message-map in-request-sample]
+    (adapters/map->span-tags message-map)
+    => (match (m/equals {:http  {:method      "get"
+                                 :status_code 200
+                                 :url         uri}
+                         :peer  {:service "purgatory"
+                                 :port    8080}
+                         :kind  "server"
+                         :event "in-request"}))))
+
+(fact "We can build trace-payload from message-map for in-request"
+  (let [message-map in-request-sample]
     (adapters/trace-payload message-map)
     => (match (m/embeds {:timestamp #(instance? LocalDateTime %)
-                         :payload   (str message-map-sample)
+                         :payload   (str (assoc message-map-sample :req-type :in-request))
                          :tags    {:http  {:method      "get"
                                            :status_code 200
                                            :url         uri}
@@ -46,13 +66,18 @@
                                    :parent-id "Shuffle_3fa149e.xlpDU"
                                    :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
 
-(fact "We can build span tags from message-map (in-request)"
-  (let [message-map message-map-sample]
-    (adapters/map->span-tags message-map-sample)
-    => (match (m/equals {:http  {:method      "get"
-                                 :status_code 200
-                                 :url         uri}
-                         :peer  {:service "purgatory"
-                                 :port    8080}
-                         :kind  "server"
-                         :event "in-request"}))))
+(fact "We can build trace-payload from message-map for out-request"
+  (let [message-map out-request-sample]
+    (adapters/trace-payload message-map)
+    => (match (m/embeds {:timestamp #(instance? LocalDateTime %)
+                         :payload   (str (assoc message-map-sample :req-type :out-request))
+                         :tags    {:http  {:method      "get"
+                                           :status_code 200
+                                           :url         uri}
+                                   :peer  {:service "purgatory"
+                                           :port    8080}
+                                   :kind  "client"
+                                   :event "out-request"}
+                         :context {:trace-id  "Shuffle_3fa149e"
+                                   :parent-id "Shuffle_3fa149e.xlpDU"
+                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
