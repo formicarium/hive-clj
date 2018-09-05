@@ -90,8 +90,6 @@
 (defn send-close-request [client]
   (send-dealer-message! (:dealer client) (close-message client)))
 
-
-
 (defrecord HiveClient [endpoint ident]
   component/Lifecycle
   (start [this]
