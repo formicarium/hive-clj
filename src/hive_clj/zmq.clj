@@ -42,7 +42,7 @@
   (await-ack dealer))
 
 (defn heartbeat-msg [client]
-  {:payload "PING" 
+  {:payload "PING"
    :meta {:type :heartbeat
           :service (:ident client)}})
 
@@ -110,7 +110,7 @@
 
   ZMQDealer
   (send-message! [this message-map]
-    (async/go 
+    (async/go
       (async/>! (-> this :channels :main-ch) (adapters/trace-payload message-map)))))
 
 (defn new-hive-client! [endpoint ident]
