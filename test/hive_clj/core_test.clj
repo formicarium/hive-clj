@@ -153,4 +153,4 @@
                  {:meta     {:type    :new-event
                              :service :purgatory}
                   :identity "purgatory"
-                  :payload  string?})))))
+                  :payload  map?})))))
