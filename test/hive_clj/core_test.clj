@@ -47,8 +47,8 @@
                                  :url         uri}
                          :peer  {:service "purgatory"
                                  :port    8080}
-                         :kind  "server"
-                         :event "in-request"}))))
+                         :direction  "consumer"
+                         :type "in-request"}))))
 
 (fact "We can build trace-payload from message-map for in-request"
   (let [message-map in-request-sample]
@@ -60,8 +60,8 @@
                                            :url         uri}
                                    :peer  {:service "purgatory"
                                            :port    8080}
-                                   :kind  "server"
-                                   :event "in-request"}
+                                   :direction "consumer"
+                                   :type  "in-request"}
                          :context {:trace-id  "Shuffle_3fa149e"
                                    :parent-id "Shuffle_3fa149e.xlpDU"
                                    :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
@@ -76,8 +76,8 @@
                                            :url         uri}
                                    :peer  {:service "purgatory"
                                            :port    8080}
-                                   :kind  "client"
-                                   :event "out-request"}
+                                   :type  "out-request"
+                                   :direction "producer"}
                          :context {:trace-id  "Shuffle_3fa149e"
                                    :parent-id "Shuffle_3fa149e.xlpDU"
                                    :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
@@ -97,8 +97,8 @@
                                               :url         uri}
                                       :peer  {:service "purgatory"
                                               :port    8080}
-                                      :kind  "server"
-                                      :event "in-request"}
+                                      :type "in-request"
+                                      :direction "consumer"}
                             :context {:trace-id  "Shuffle_3fa149e"
                                       :parent-id "Shuffle_3fa149e.xlpDU"
                                       :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}})))))

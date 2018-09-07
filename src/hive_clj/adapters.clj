@@ -12,14 +12,17 @@
 (defn extract-service [{headers :headers}]
   (get headers "host"))
 
-(def specific-tags {:in-request   {:kind  "server"
-                                   :event "in-request"}
-                    :out-response {:kind  "client"
-                                   :event "out-response"}
-                    :out-request  {:kind  "client"
-                                   :event "out-request"}
-                    :in-response  {:kind  "server"
-                                   :event "in-response"}})
+(def specific-tags {:out-request  {:direction  "producer"
+                                   :type "out-request"}
+
+                    :in-request   {:direction  "consumer"
+                                   :type "in-request"}
+
+                    :in-response  {:direction  "producer"
+                                   :type "in-response"}
+
+                    :out-response {:direction  "consumer"
+                                   :type "out-response"}})
 
 (defmulti map->span-tags :req-type)
 

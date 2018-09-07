@@ -21,18 +21,16 @@
                              })
 
 (s/defschema SpanTags {:http HttpTags
-                       :db DbTags
-                       :message_bus MessageBusTags
-                       :error s/Bool;; true if and only if the application considers the operation represented by the Span to have failed
-                       :kind s/Str;; Either "client" or "server" for the appropriate roles in an RPC, and "producer" or "consumer" for the appropriate roles in a messaging scenario
-                       :event s/Str;; A stable identifier for some notable moment in the lifetime of a Span. For instance, a mutex lock acquisition or release or the sorts of lifetime events in a browser page load described in the Performance.timing specification. E.g., from Zipkin, "cs", "sr", "ss", or "cr". Or, more generally, "initialized" or "timed out". For errors, "error"
+                       :direction s/Str;; Either "client" or "server" for the appropriate roles in an RPC, and "producer" or "consumer" for the appropriate roles in a messaging scenario
+                       :type s/Str;; A stable identifier for some notable moment in the lifetime of a Span. For instance, a mutex lock acquisition or release or the sorts of lifetime events in a browser page load described in the Performance.timing specification. E.g., from Zipkin, "cs", "sr", "ss", or "cr". Or, more generally, "initialized" or "timed out". For errors, "error"
                        })
 
 (s/defschema SpanContext {:trace-id s/Str
                           :span-id s/Str
                           :parent-id s/Str})
 
-(s/defschema Span {:timestamp LocalDateTime
+(s/defschema Span {:start LocalDateTime
+                   :end LocalDateTime
                    :tags SpanTags
                    :payload s/Str
                    :context SpanContext})
