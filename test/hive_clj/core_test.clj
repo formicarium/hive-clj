@@ -8,13 +8,18 @@
 
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
 (def uri "some-uri")
-(def message-map-sample {:request {:headers        {"X-Correlation-ID" cid
-                                                    "host"             "purgatory"}
-                                   :uri            uri
-                                   :request-method :get
-                                   :service        "purgatory"
-                                   :server-port    8080}
-                         :response {:status 200}})
+(def message-map-sample {:request  {:headers        {"X-Correlation-ID" cid
+                                                     "host"             "purgatory"}
+                                    :uri            uri
+                                    :body {:some   "form"
+                                           :params "for us"}
+                                    :request-method :get
+                                    :service        "purgatory"
+                                    :server-port    8080}
+                         :response {:status  200
+                                    :body    {:risco-quote "BELESSA"}
+                                    :headers {"Content-Length"   "345"
+                                              "Content-Encoding" "gzip"}}})
 
 (defn req-sample [map req-type]
   (merge map {:req-type req-type}))
@@ -56,11 +61,39 @@
                          :direction "consumer"
                          :type      "in-request"}))))
 
+(tabular
+  (fact "About extracting payload from message-map"
+    (adapters/extract-payload ?map ?fn) => ?payload)
+  ?map ?fn ?payload
+  message-map-sample
+  :request
+  {:headers {"X-Correlation-ID" cid
+             "host"             "purgatory"}
+   :body    {:some   "form"
+             :params "for us"}}
+
+  message-map-sample
+  :response
+  {:body    {:risco-quote "BELESSA"}
+   :headers {"Content-Length"   "345"
+             "Content-Encoding" "gzip"}}
+
+  {:request {:headers {"some" "headers"}
+             :body {}}}
+  :request
+  {:headers {"some" "headers"}
+   :body {}}
+
+  {}
+  :request
+  {:headers {}
+   :body {}})
+
 (fact "We can build trace-payload from message-map for in-request"
   (let [message-map in-request-sample]
     (adapters/trace-payload message-map)
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
-                         :payload (str (assoc message-map-sample :req-type :in-request))
+                         :payload (partial contains [:headers :body])
                          :tags    {:http      {:method      "get"
                                                :url         uri}
                                    :peer      {:service "purgatory"
@@ -73,7 +106,7 @@
   (let [message-map out-request-sample]
     (adapters/trace-payload message-map)
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
-                         :payload (str (assoc message-map-sample :req-type :out-request))
+                         :payload (partial contains [:headers :body])
                          :tags    {:http      {:method      "get"
                                                :url         uri}
                                    :peer      {:service "purgatory"
@@ -87,7 +120,7 @@
     (adapters/trace-payload message-map)
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
                          :end #(instance? LocalDateTime %)
-                         :payload (str (assoc message-map-sample :req-type :in-response))
+                         :payload (partial contains [:headers :body])
                          :tags    {:http      {:method      "get"
                                                :status_code 200
                                                :url         uri}
@@ -102,7 +135,7 @@
     (adapters/trace-payload message-map)
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
                          :end #(instance? LocalDateTime %)
-                         :payload (str (assoc message-map-sample :req-type :out-response))
+                         :payload (partial contains [:headers :body])
                          :tags    {:http      {:method      "get"
                                                :status_code 200
                                                :url         uri}
@@ -120,12 +153,4 @@
                  {:meta     {:type    :new-event
                              :service :purgatory}
                   :identity "purgatory"
-                  :payload  {:start   #(instance? LocalDateTime %)
-                             :payload (str (assoc message-map-sample :req-type :in-request))
-                             :tags    {:http      {:method      "get"
-                                                   :url         uri}
-                                       :peer      {:service "purgatory"
-                                                   :port    8080}
-                                       :type      "in-request"
-                                       :direction "consumer"}
-                             :context (every-pred seq map?)}})))))
+                  :payload  string?})))))

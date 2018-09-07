@@ -1,5 +1,6 @@
 (ns hive-clj.adapters
-  (:require [cheshire.core :as cheshire])
+  (:require [cheshire.core :as cheshire :refer :all]
+            [cheshire.generate :refer [add-encoder]])
   (:import java.time.LocalDateTime))
 
 (defn str->bytes [str]
@@ -75,37 +76,47 @@
 (defn map->span-ctx [{:keys [request] :as message-map}]
   (cid->span-ctx (request->cid request)))
 
+(defn extract-payload [message-map select-fn]
+  (merge {:headers {}
+          :body {}}
+         (select-keys (select-fn message-map) [:headers :body])))
+
 (defmulti trace-payload :req-type)
 
 (defmethod trace-payload :in-request [message-map];; supposedly a pedestal request map, at least for now
   {:start  (LocalDateTime/now)
    :tags (map->span-tags message-map)
-   :payload (str message-map)
+   :payload (extract-payload message-map :request)
    :context (map->span-ctx message-map)})
 
 (defmethod trace-payload :out-request [message-map]
   {:start  (LocalDateTime/now)
    :tags (map->span-tags message-map)
-   :payload (str message-map)
+   :payload (extract-payload message-map :request)
    :context (map->span-ctx message-map)})
 
 (defmethod trace-payload :in-response [message-map]
   {:start (LocalDateTime/now)
    :end (LocalDateTime/now)
    :tags (map->span-tags message-map)
-   :payload (str message-map)
+   :payload (extract-payload message-map :response)
    :context (map->span-ctx message-map)})
 
 (defmethod trace-payload :out-response [message-map]
   {:start (LocalDateTime/now)
    :end (LocalDateTime/now)
    :tags (map->span-tags message-map)
-   :payload (str message-map)
+   :payload (extract-payload message-map :response)
    :context (map->span-ctx message-map)})
+
+
+(add-encoder java.time.LocalDateTime
+             (fn [c jsonGenerator]
+               (.writeString jsonGenerator (.toString c))))
 
 (defn hive-message [message-map]
   (let [service (extract-service (:request message-map))]
     {:meta {:type :new-event
             :service (keyword service)}
      :identity service
-     :payload (trace-payload message-map)}))
+     :payload (cheshire/generate-string (trace-payload message-map))}))

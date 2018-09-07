@@ -17,8 +17,6 @@
 (s/defschema PeerTags {:peer.port s/Int;; Remote port. E.g., 80
                        :peer.service s/Str;; Remote service name (for some unspecified definition of "service"). E.g., "elasticsearch", "a_custom_microservice", "memcache". Meaning should correspond with values set in service
                        })
-(s/defschema MessageBusTags {:message_bus.destination s/Str;; An address at which messages can be exchanged. E.g. A Kafka record has an associated "topic name" that can be extracted by the instrumented producer or consumer and stored using this tag.
-                             })
 
 (s/defschema SpanTags {:http HttpTags
                        :direction s/Str;; Either "client" or "server" for the appropriate roles in an RPC, and "producer" or "consumer" for the appropriate roles in a messaging scenario
