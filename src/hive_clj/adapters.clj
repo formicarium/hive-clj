@@ -67,13 +67,13 @@
 (defmulti trace-payload :req-type)
 
 (defmethod trace-payload :in-request [message-map];; supposedly a pedestal request map, at least for now
-  {:timestamp  (LocalDateTime/now)
+  {:start  (LocalDateTime/now)
    :tags (map->span-tags message-map)
    :payload (str message-map)
    :context (map->span-ctx message-map)})
 
 (defmethod trace-payload :out-request [message-map]
-  {:timestamp  (LocalDateTime/now)
+  {:start  (LocalDateTime/now)
    :tags (map->span-tags message-map)
    :payload (str message-map)
    :context (map->span-ctx message-map)})
