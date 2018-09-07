@@ -42,6 +42,22 @@
                  :port (:server-port request)}}
          (req-type specific-tags)))
 
+(defmethod map->span-tags :in-response [{:keys [req-type request]}]
+  (merge {:http {:method (name (:request-method request))
+                 :status_code (:status request)
+                 :url (:uri request)}
+          :peer {:service (extract-service request)
+                 :port (:server-port request)}}
+         (req-type specific-tags)))
+
+(defmethod map->span-tags :out-response [{:keys [req-type request]}]
+  (merge {:http {:method (name (:request-method request))
+                 :status_code (:status request)
+                 :url (:uri request)}
+          :peer {:service (extract-service request)
+                 :port (:server-port request)}}
+         (req-type specific-tags)))
+
 (defn cid->trace-id [cid]
   (second (re-find #"(^[A-Za-z0-9\-\_]+)\." cid)))
 
@@ -61,9 +77,6 @@
 (defn map->span-ctx [{:keys [request] :as message-map}]
   (cid->span-ctx (request->cid request)))
 
-(defn map->op-name [{:keys [uri]}]
-  uri)
-
 (defmulti trace-payload :req-type)
 
 (defmethod trace-payload :in-request [message-map];; supposedly a pedestal request map, at least for now
@@ -74,6 +87,20 @@
 
 (defmethod trace-payload :out-request [message-map]
   {:start  (LocalDateTime/now)
+   :tags (map->span-tags message-map)
+   :payload (str message-map)
+   :context (map->span-ctx message-map)})
+
+(defmethod trace-payload :in-response [message-map]
+  {:start (LocalDateTime/now)
+   :end (LocalDateTime/now)
+   :tags (map->span-tags message-map)
+   :payload (str message-map)
+   :context (map->span-ctx message-map)})
+
+(defmethod trace-payload :out-response [message-map]
+  {:start (LocalDateTime/now)
+   :end (LocalDateTime/now)
    :tags (map->span-tags message-map)
    :payload (str message-map)
    :context (map->span-ctx message-map)})

@@ -22,6 +22,8 @@
 (def http-req-sample (partial req-sample message-map-sample))
 (def in-request-sample (http-req-sample :in-request))
 (def out-request-sample (http-req-sample :out-request))
+(def in-response-sample (http-req-sample :in-response))
+(def out-response-sample (http-req-sample :out-response))
 
 (fact "We can get trace-id from cid"
   (adapters/cid->trace-id cid) => "Shuffle_3fa149e")
@@ -78,6 +80,40 @@
                                                :port    8080}
                                    :type      "out-request"
                                    :direction "producer"}
+                         :context {:trace-id  "Shuffle_3fa149e"
+                                   :parent-id "Shuffle_3fa149e.xlpDU"
+                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+
+(fact "We can build trace-payload from message-map for in-response"
+  (let [message-map in-response-sample]
+    (adapters/trace-payload message-map)
+    => (match (m/embeds {:start   #(instance? LocalDateTime %)
+                         :end #(instance? LocalDateTime %)
+                         :payload (str (assoc message-map-sample :req-type :in-response))
+                         :tags    {:http      {:method      "get"
+                                               :status_code 200
+                                               :url         uri}
+                                   :peer      {:service "purgatory"
+                                               :port    8080}
+                                   :type      "in-response"
+                                   :direction "producer"}
+                         :context {:trace-id  "Shuffle_3fa149e"
+                                   :parent-id "Shuffle_3fa149e.xlpDU"
+                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+
+(fact "We can build trace-payload from message-map for out-response"
+  (let [message-map out-response-sample]
+    (adapters/trace-payload message-map)
+    => (match (m/embeds {:start   #(instance? LocalDateTime %)
+                         :end #(instance? LocalDateTime %)
+                         :payload (str (assoc message-map-sample :req-type :out-response))
+                         :tags    {:http      {:method      "get"
+                                               :status_code 200
+                                               :url         uri}
+                                   :peer      {:service "purgatory"
+                                               :port    8080}
+                                   :type      "out-response"
+                                   :direction "consumer"}
                          :context {:trace-id  "Shuffle_3fa149e"
                                    :parent-id "Shuffle_3fa149e.xlpDU"
                                    :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
