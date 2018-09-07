@@ -28,7 +28,6 @@
 
 (defmethod map->span-tags :in-request [{:keys [req-type request]}]
   (merge {:http {:method (name (:request-method request))
-                 :status_code (:status request)
                  :url (:uri request)}
           :peer {:service (extract-service request)
                  :port (:server-port request)}}
@@ -36,30 +35,29 @@
 
 (defmethod map->span-tags :out-request [{:keys [req-type request]}]
   (merge {:http {:method (name (:request-method request))
-                 :status_code (:status request)
                  :url (:uri request)}
           :peer {:service (extract-service request)
                  :port (:server-port request)}}
          (req-type specific-tags)))
 
-(defmethod map->span-tags :in-response [{:keys [req-type request]}]
+(defmethod map->span-tags :in-response [{:keys [req-type request response]}]
   (merge {:http {:method (name (:request-method request))
-                 :status_code (:status request)
+                 :status_code (:status response)
                  :url (:uri request)}
           :peer {:service (extract-service request)
                  :port (:server-port request)}}
          (req-type specific-tags)))
 
-(defmethod map->span-tags :out-response [{:keys [req-type request]}]
+(defmethod map->span-tags :out-response [{:keys [req-type request response]}]
   (merge {:http {:method (name (:request-method request))
-                 :status_code (:status request)
+                 :status_code (:status response)
                  :url (:uri request)}
           :peer {:service (extract-service request)
                  :port (:server-port request)}}
          (req-type specific-tags)))
 
 (defn cid->trace-id [cid]
-  (second (re-find #"(^[A-Za-z0-9\-\_]+)\." cid)))
+  (first (clojure.string/split cid #"\.")))
 
 (defn cid->parent-id [cid]
   (second (re-find #"^(.*)\." cid)))

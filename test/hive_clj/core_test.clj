@@ -11,10 +11,10 @@
 (def message-map-sample {:request {:headers        {"X-Correlation-ID" cid
                                                     "host"             "purgatory"}
                                    :uri            uri
-                                   :status         200
                                    :request-method :get
                                    :service        "purgatory"
-                                   :server-port    8080}})
+                                   :server-port    8080}
+                         :response {:status 200}})
 
 (defn req-sample [map req-type]
   (merge map {:req-type req-type}))
@@ -25,14 +25,20 @@
 (def in-response-sample (http-req-sample :in-response))
 (def out-response-sample (http-req-sample :out-response))
 
-(fact "We can get trace-id from cid"
-  (adapters/cid->trace-id cid) => "Shuffle_3fa149e")
+(tabular
+  (facts "About span context"
+    (fact "We build trace-id"
+      (adapters/cid->trace-id ?cid) => ?trace-id)
 
-(fact "We can get parent-id from cid"
-  (adapters/cid->parent-id cid) => "Shuffle_3fa149e.xlpDU")
+    (fact "We build parent-id"
+      (adapters/cid->parent-id ?cid) => ?parent-id)
 
-(fact "We can get span-id from cid"
-  (adapters/cid->span-id cid) => "Shuffle_3fa149e.xlpDU.ZIKGH")
+    (fact "We build span-id"
+      (adapters/cid->span-id ?cid) => ?span-id))
+  ?cid                           ?trace-id         ?parent-id              ?span-id
+  "Shuffle_3fa149e.xlpDU.ZIKGH"  "Shuffle_3fa149e" "Shuffle_3fa149e.xlpDU" "Shuffle_3fa149e.xlpDU.ZIKGH"
+  "A.B"                          "A"               "A"                     "A.B"
+  "A"                            "A"                nil                    "A")
 
 (fact "We can build a span context from a message-map"
   (adapters/map->span-ctx message-map-sample)
@@ -40,12 +46,10 @@
       :parent-id "Shuffle_3fa149e.xlpDU"
       :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"})
 
-
 (fact "We can build span tags from message-map (in-request)"
   (let [message-map in-request-sample]
     (adapters/map->span-tags message-map)
     => (match (m/equals {:http      {:method      "get"
-                                     :status_code 200
                                      :url         uri}
                          :peer      {:service "purgatory"
                                      :port    8080}
@@ -58,15 +62,12 @@
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
                          :payload (str (assoc message-map-sample :req-type :in-request))
                          :tags    {:http      {:method      "get"
-                                               :status_code 200
                                                :url         uri}
                                    :peer      {:service "purgatory"
                                                :port    8080}
                                    :direction "consumer"
                                    :type      "in-request"}
-                         :context {:trace-id  "Shuffle_3fa149e"
-                                   :parent-id "Shuffle_3fa149e.xlpDU"
-                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+                         :context (every-pred seq map?)}))))
 
 (fact "We can build trace-payload from message-map for out-request"
   (let [message-map out-request-sample]
@@ -74,15 +75,12 @@
     => (match (m/embeds {:start   #(instance? LocalDateTime %)
                          :payload (str (assoc message-map-sample :req-type :out-request))
                          :tags    {:http      {:method      "get"
-                                               :status_code 200
                                                :url         uri}
                                    :peer      {:service "purgatory"
                                                :port    8080}
                                    :type      "out-request"
                                    :direction "producer"}
-                         :context {:trace-id  "Shuffle_3fa149e"
-                                   :parent-id "Shuffle_3fa149e.xlpDU"
-                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+                         :context (every-pred seq map?)}))))
 
 (fact "We can build trace-payload from message-map for in-response"
   (let [message-map in-response-sample]
@@ -97,9 +95,7 @@
                                                :port    8080}
                                    :type      "in-response"
                                    :direction "producer"}
-                         :context {:trace-id  "Shuffle_3fa149e"
-                                   :parent-id "Shuffle_3fa149e.xlpDU"
-                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+                         :context (every-pred seq map?)}))))
 
 (fact "We can build trace-payload from message-map for out-response"
   (let [message-map out-response-sample]
@@ -114,9 +110,7 @@
                                                :port    8080}
                                    :type      "out-response"
                                    :direction "consumer"}
-                         :context {:trace-id  "Shuffle_3fa149e"
-                                   :parent-id "Shuffle_3fa149e.xlpDU"
-                                   :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}))))
+                         :context (every-pred seq map?)}))))
 
 (s/with-fn-validation
   (fact "We can build a hive message from message-map for in-request"
@@ -129,12 +123,9 @@
                   :payload  {:start   #(instance? LocalDateTime %)
                              :payload (str (assoc message-map-sample :req-type :in-request))
                              :tags    {:http      {:method      "get"
-                                                   :status_code 200
                                                    :url         uri}
                                        :peer      {:service "purgatory"
                                                    :port    8080}
                                        :type      "in-request"
                                        :direction "consumer"}
-                             :context {:trace-id  "Shuffle_3fa149e"
-                                       :parent-id "Shuffle_3fa149e.xlpDU"
-                                       :span-id   "Shuffle_3fa149e.xlpDU.ZIKGH"}}})))))
+                             :context (every-pred seq map?)}})))))
