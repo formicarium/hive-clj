@@ -7,6 +7,10 @@
   (when str
     (.getBytes str)))
 
+(add-encoder java.time.LocalDateTime
+             (fn [c jsonGenerator]
+               (.writeString jsonGenerator (.toString c))))
+
 (defn raw->event [message-map]
   [(cheshire/generate-string (:meta message-map)) (cheshire/generate-string (:payload message-map))])
 
@@ -109,14 +113,9 @@
    :payload (extract-payload message-map :response)
    :context (map->span-ctx message-map)})
 
-
-(add-encoder java.time.LocalDateTime
-             (fn [c jsonGenerator]
-               (.writeString jsonGenerator (.toString c))))
-
 (defn hive-message [message-map]
   (let [service (extract-service (:request message-map))]
     {:meta {:type :new-event
             :service (keyword service)}
      :identity service
-     :payload (cheshire/generate-string (trace-payload message-map))}))
+     :payload (trace-payload message-map)}))
