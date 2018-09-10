@@ -4,7 +4,7 @@
   (:import java.time.LocalDateTime))
 
 (s/defschema HttpTags {:method s/Str;; HTTP method of the request for the associated Span. E.g., "GET", "POST"
-                       :status_code s/Int;; HTTP response status code for the associated Span. E.g., 200, 503, 404
+                       (s/optional-key :status_code) s/Int;; HTTP response status code for the associated Span. E.g., 200, 503, 404
                        :url s/Str;; URL of the request being handled in this segment of the trace, in standard URI format. E.g., "https://domain.net/path/to?resource=here"
                        })
 
@@ -14,23 +14,31 @@
                      :user s/Str;; Username for accessing database. E.g., "readonly_user" or "reporting_user"
                      })
 
-(s/defschema PeerTags {:peer.port s/Int;; Remote port. E.g., 80
-                       :peer.service s/Str;; Remote service name (for some unspecified definition of "service"). E.g., "elasticsearch", "a_custom_microservice", "memcache". Meaning should correspond with values set in service
-                       })
+(s/defschema Peer {:port s/Int;; Remote port. E.g., 80
+                   :service s/Str;; Remote service name (for some unspecified definition of "service"). E.g., "elasticsearch", "a_custom_microservice", "memcache". Meaning should correspond with values set in service
+                   })
+
+(s/defschema SpanDirection (s/enum :consumer :producer))
+(s/defschema SpanType (s/enum :http-in :http-out :kafka))
+(s/defschema SpanKind (s/enum :start :end))
 
 (s/defschema SpanTags {:http HttpTags
-                       :direction s/Str;; Either "client" or "server" for the appropriate roles in an RPC, and "producer" or "consumer" for the appropriate roles in a messaging scenario
-                       :type s/Str;; A stable identifier for some notable moment in the lifetime of a Span. For instance, a mutex lock acquisition or release or the sorts of lifetime events in a browser page load described in the Performance.timing specification. E.g., from Zipkin, "cs", "sr", "ss", or "cr". Or, more generally, "initialized" or "timed out". For errors, "error"
+                       :direction SpanDirection
+                       :peer Peer
+                       :type SpanType
+                       :kind SpanKind
                        })
 
 (s/defschema SpanContext {:trace-id s/Str
                           :span-id s/Str
                           :parent-id s/Str})
 
-(s/defschema Span {:start LocalDateTime
-                   :end LocalDateTime
+(s/defschema SpanPayload {:body s/Any
+                          :headers s/Any})
+
+(s/defschema Span {:timestamp LocalDateTime
                    :tags SpanTags
-                   :payload s/Str
+                   :payload SpanPayload
                    :context SpanContext})
 
 (s/defschema HiveMessage {:meta {:type s/Keyword
