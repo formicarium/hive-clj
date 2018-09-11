@@ -8,11 +8,11 @@
 
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
 (def uri "some-uri")
-(def message-map-sample {:request  {:headers        {"x-correlation-id" cid
-                                                     "host"             "purgatory"}
+(def message-map-sample {:cid      cid
+                         :request  {:headers        {"host"             "purgatory"}
                                     :uri            uri
-                                    :body {:some   "form"
-                                           :params "for us"}
+                                    :body           {:some   "form"
+                                                     :params "for us"}
                                     :request-method :get
                                     :service        "purgatory"
                                     :server-port    8080}
@@ -72,8 +72,7 @@
     ?map ?fn ?payload
     message-map-sample
     :request
-    {:headers {"X-Correlation-ID" cid
-               "host"             "purgatory"}
+    {:headers {"host" "purgatory"}
      :body    {:some   "form"
                :params "for us"}}
 
@@ -84,15 +83,15 @@
                "Content-Encoding" "gzip"}}
 
     {:request {:headers {"some" "headers"}
-               :body {}}}
+               :body    {}}}
     :request
     {:headers {"some" "headers"}
-     :body {}}
+     :body    {}}
 
     {}
     :request
     {:headers {}
-     :body {}}))
+     :body    {}}))
 
 (s/with-fn-validation
   (fact "We can build trace-payload from message-map for in-request"

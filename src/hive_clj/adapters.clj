@@ -84,12 +84,12 @@
    :span-id (cid->span-id cid)
    :parent-id (cid->parent-id cid)})
 
-(s/defn request->cid :- s/Str [{:keys [headers]}]
+#_(s/defn request->cid :- s/Str [{:keys [headers]}]
   (get headers "x-correlation-id"))
 
 (s/defn map->span-ctx :- models/SpanContext
-  [{:keys [request] :as message-map}]
-  (cid->span-ctx (request->cid request)))
+  [{:keys [cid] :as message-map}]
+  (cid->span-ctx cid))
 
 (defn extract-payload [message-map select-fn]
   (merge {:headers {}
