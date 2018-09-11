@@ -1,6 +1,7 @@
 (ns hive-clj.adapters
   (:require [cheshire.core :as cheshire :refer :all]
             [cheshire.generate :refer [add-encoder]]
+            [clojure.java.data :refer [from-java]]
             [hive-clj.models :as models]
             [schema.core :as s])
   (:import java.time.LocalDateTime))
@@ -134,8 +135,7 @@
 (s/defmethod hive-message :new-event
   [message-map]
   (let [service (extract-service (:request message-map))]
-    (cheshire/generate-string
-     {:meta {:type :new-event
-             :service (keyword service)}
-      :identity service
-      :payload (trace-payload message-map)})))
+    (from-java {:meta {:type :new-event
+                       :service (keyword service)}
+                :identity service
+                :payload (trace-payload message-map)})))

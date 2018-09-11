@@ -160,9 +160,9 @@
 (s/with-fn-validation
   (fact "We can build a hive message from message-map for in-request"
     (let [message-map in-request-sample]
-      (parse-string (adapters/hive-message message-map))
+      (adapters/hive-message message-map)
       => (match (m/embeds
-                 {"meta"     {"type"    "new-event"
-                              "service" "purgatory"}
-                  "identity" "purgatory"
-                  "payload"  map?})))))
+                 {:meta     {:type    :new-event
+                             :service :purgatory}
+                  :identity "purgatory"
+                  :payload  map?})))))
