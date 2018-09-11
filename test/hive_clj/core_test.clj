@@ -9,6 +9,7 @@
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
 (def uri "some-uri")
 (def message-map-sample {:cid      cid
+                         :meta {:type :new-event};;TODO experimentation
                          :request  {:headers        {"host"             "purgatory"}
                                     :uri            uri
                                     :body           {:some   "form"

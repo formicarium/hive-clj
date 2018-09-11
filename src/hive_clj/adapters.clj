@@ -122,7 +122,16 @@
    :payload (extract-payload message-map :response)
    :context (map->span-ctx message-map)})
 
-(s/defn hive-message :- models/HiveMessage
+
+(defmulti hive-message #(-> % :meta :type))
+
+(s/defmethod hive-message :heartbeat [message-map]
+  message-map)
+
+(s/defmethod hive-message :test [message-map]
+  message-map)
+
+(s/defmethod hive-message :new-event
   [message-map]
   (let [service (extract-service (:request message-map))]
     {:meta {:type :new-event
