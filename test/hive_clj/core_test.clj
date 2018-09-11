@@ -2,6 +2,7 @@
   (:require [hive-clj.adapters :as adapters]
             [matcher-combinators.matchers :as m]
             [matcher-combinators.midje :refer [match]]
+            [cheshire.core :refer [parse-string]]
             [midje.sweet :refer :all]
             [schema.core :as s])
   (:import java.time.LocalDateTime))
@@ -159,9 +160,9 @@
 (s/with-fn-validation
   (fact "We can build a hive message from message-map for in-request"
     (let [message-map in-request-sample]
-      (adapters/hive-message message-map)
+      (parse-string (adapters/hive-message message-map))
       => (match (m/embeds
-                 {:meta     {:type    :new-event
-                             :service :purgatory}
-                  :identity "purgatory"
-                  :payload  map?})))))
+                 {"meta"     {"type"    "new-event"
+                              "service" "purgatory"}
+                  "identity" "purgatory"
+                  "payload"  map?})))))

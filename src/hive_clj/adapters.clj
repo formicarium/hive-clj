@@ -134,7 +134,8 @@
 (s/defmethod hive-message :new-event
   [message-map]
   (let [service (extract-service (:request message-map))]
-    {:meta {:type :new-event
-            :service (keyword service)}
-     :identity service
-     :payload (trace-payload message-map)}))
+    (cheshire/generate-string
+     {:meta {:type :new-event
+             :service (keyword service)}
+      :identity service
+      :payload (trace-payload message-map)})))
