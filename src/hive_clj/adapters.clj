@@ -85,7 +85,7 @@
    :parent-id (cid->parent-id cid)})
 
 (s/defn request->cid :- s/Str [{:keys [headers]}]
-  (get headers "X-Correlation-ID"))
+  (get headers "x-correlation-id"))
 
 (s/defn map->span-ctx :- models/SpanContext
   [{:keys [request] :as message-map}]

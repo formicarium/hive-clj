@@ -8,7 +8,7 @@
 
 (def cid "Shuffle_3fa149e.xlpDU.ZIKGH")
 (def uri "some-uri")
-(def message-map-sample {:request  {:headers        {"X-Correlation-ID" cid
+(def message-map-sample {:request  {:headers        {"x-correlation-id" cid
                                                      "host"             "purgatory"}
                                     :uri            uri
                                     :body {:some   "form"

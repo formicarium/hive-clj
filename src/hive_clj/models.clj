@@ -3,20 +3,17 @@
             [schema.core :as s])
   (:import java.time.LocalDateTime))
 
-(s/defschema HttpTags {:method s/Str;; HTTP method of the request for the associated Span. E.g., "GET", "POST"
-                       (s/optional-key :status_code) s/Int;; HTTP response status code for the associated Span. E.g., 200, 503, 404
-                       :url s/Str;; URL of the request being handled in this segment of the trace, in standard URI format. E.g., "https://domain.net/path/to?resource=here"
-                       })
+(s/defschema HttpTags {:method s/Str
+                       (s/optional-key :status_code) s/Int
+                       :url s/Str})
 
-(s/defschema DbTags {:instance s/Str;; Database instance name. E.g., In java, if the jdbc.url="jdbc:mysql://127.0.0.1:3306/customers", the instance name is "customers"
-                     :statement s/Str;; A database statement for the given database type. E.g., for db.type="sql", "SELECT * FROM wuser_table"; for db.type="redis", "SET mykey 'WuValue'"
-                     :type s/Str;; Database type. For any SQL database, "sql". For others, the lower-case database category, e.g. "cassandra", "hbase", or "redis"
-                     :user s/Str;; Username for accessing database. E.g., "readonly_user" or "reporting_user"
-                     })
+(s/defschema DbTags {:instance s/Str
+                     :statement s/Str
+                     :type s/Str
+                     :user s/Str})
 
-(s/defschema Peer {:port s/Int;; Remote port. E.g., 80
-                   :service s/Str;; Remote service name (for some unspecified definition of "service"). E.g., "elasticsearch", "a_custom_microservice", "memcache". Meaning should correspond with values set in service
-                   })
+(s/defschema Peer {:port s/Int
+                   :service s/Str})
 
 (s/defschema SpanDirection (s/enum :consumer :producer))
 (s/defschema SpanType (s/enum :http-in :http-out :kafka))
@@ -26,8 +23,7 @@
                        :direction SpanDirection
                        :peer Peer
                        :type SpanType
-                       :kind SpanKind
-                       })
+                       :kind SpanKind})
 
 (s/defschema SpanContext {:trace-id s/Str
                           :span-id s/Str
