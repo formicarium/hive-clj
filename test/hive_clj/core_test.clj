@@ -157,7 +157,8 @@
                                        :direction :consumer}
                            :context   (every-pred seq map?)})))))
 
-(s/with-fn-validation
+
+#_(s/with-fn-validation
   (fact "We can build a hive message from message-map for in-request"
     (let [message-map in-request-sample]
       (adapters/hive-message message-map)

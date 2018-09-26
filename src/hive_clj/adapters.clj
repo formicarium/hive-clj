@@ -85,17 +85,14 @@
    :span-id (cid->span-id cid)
    :parent-id (cid->parent-id cid)})
 
-#_(s/defn request->cid :- s/Str [{:keys [headers]}]
-  (get headers "x-correlation-id"))
-
 (s/defn map->span-ctx :- models/SpanContext
   [{:keys [cid] :as message-map}]
   (cid->span-ctx cid))
 
 (defn extract-payload [message-map select-fn]
-  (merge {:headers {}
-          :body {}}
-         (select-keys (select-fn message-map) [:headers :body])))
+  (-> (select-keys (select-fn message-map) [:headers :body])
+      (update :headers #(or (from-java %) {}))
+      (update :body #(or (from-java %) {}))))
 
 (defmulti trace-payload :req-type)
 
@@ -134,8 +131,4 @@
 
 (s/defmethod hive-message :new-event
   [message-map]
-  (let [service (extract-service (:request message-map))]
-    (from-java {:meta {:type :new-event
-                       :service (keyword service)}
-                :identity service
-                :payload (trace-payload message-map)})))
+  (update-in message-map [:payload :payload] from-java))
